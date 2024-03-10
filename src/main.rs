@@ -1,11 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
-use tokio::{
-    fs::File,
-    io::{stdin, AsyncBufRead, AsyncBufReadExt, BufReader},
-};
+use ezboard::event::{Event, EventStream};
 
-use std::{path::PathBuf, pin::Pin};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -13,28 +10,21 @@ struct Cli {
     path: Option<PathBuf>,
 }
 
-async fn get_input_stream(Cli { path, .. }: &Cli) -> Result<Pin<Box<dyn AsyncBufRead>>> {
-    let reader: Pin<Box<dyn AsyncBufRead>> = match path {
-        Some(path) => {
-            let f = File::open(path).await?;
-            Box::pin(BufReader::new(f))
-        }
-        None => Box::pin(BufReader::new(stdin())),
-    };
-
-    Ok(reader)
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let reader = get_input_stream(&args).await?;
+    let mut event_stream = EventStream::new(1000, &args.path).await;
+    
+    loop {
+        let event = event_stream.next().await;
 
-    let mut lines = reader.lines();
-
-    while let Some(line) = lines.next_line().await? {
-        println!("{}", line);
+        match event {
+            Event::Tick => println!("TICK"),
+            Event::LineRead(line) => println!("{}", line),
+            Event::End => break,
+            _ => ()
+        }
     }
 
     Ok(())
