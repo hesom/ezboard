@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
-use ezboard::event::{Event, EventStream};
+use crossterm::event::KeyCode;
+use ezboard::{app::App, event::{Event, EventStream}, tui::Tui};
+use ratatui::{backend::CrosstermBackend, Terminal};
 
 use std::path::PathBuf;
 
@@ -14,18 +16,30 @@ struct Cli {
 async fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let mut event_stream = EventStream::new(1000, &args.path).await;
+    let backend = CrosstermBackend::new(std::io::stdout());
+    let terminal = Terminal::new(backend)?;
+
+    let event_stream = EventStream::new(1000, &args.path).await;
     
-    loop {
-        let event = event_stream.next().await;
+    let mut app = App::new();
+    let mut tui = Tui::new(terminal, event_stream);
+    tui.init()?;
+    
+    while app.running {
+        let event = tui.event_stream.next().await;
 
         match event {
-            Event::Tick => println!("TICK"),
-            Event::LineRead(line) => println!("{}", line),
-            Event::End => break,
-            _ => ()
+            Event::Tick => tui.draw(&mut app)?,
+            Event::LineRead(line) => app.process_line(&line),
+            Event::End => app.quit(),
+            Event::Key(key) => if key.code == KeyCode::Char('q') || key.code == KeyCode::Char('Q'){
+                app.quit()
+            }
         }
     }
 
+    tui.exit()?;
+
+    std::io::copy(&mut std::io::stdin(),&mut std::io::stdout())?;
     Ok(())
 }
