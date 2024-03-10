@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::{
+use tokio::{
     fs::File,
-    io::{stdin, BufRead, BufReader},
-    path::PathBuf,
+    io::{stdin, AsyncBufRead, AsyncBufReadExt, BufReader},
 };
+
+use std::{path::PathBuf, pin::Pin};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -12,31 +13,28 @@ struct Cli {
     path: Option<PathBuf>,
 }
 
-fn get_input_stream(Cli { path, .. }: &Cli) -> Result<Box<dyn BufRead>> {
-    let reader: Box<dyn BufRead> = match path {
-        Some(path) => path
-            .is_file()
-            .then(|| {
-                Box::new(BufReader::new(
-                    File::open(path)
-                        .context("File exists, but still error reading file")
-                        .unwrap(),
-                ))
-            })
-            .context("Path is not a file")?,
-        None => Box::new(BufReader::new(stdin())),
+async fn get_input_stream(Cli { path, .. }: &Cli) -> Result<Pin<Box<dyn AsyncBufRead>>> {
+    let reader: Pin<Box<dyn AsyncBufRead>> = match path {
+        Some(path) => {
+            let f = File::open(path).await?;
+            Box::pin(BufReader::new(f))
+        }
+        None => Box::pin(BufReader::new(stdin())),
     };
 
     Ok(reader)
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let reader = get_input_stream(&args)?;
+    let reader = get_input_stream(&args).await?;
 
-    for line in reader.lines() {
-        println!("{}", line?);
+    let mut lines = reader.lines();
+
+    while let Some(line) = lines.next_line().await? {
+        println!("{}", line);
     }
 
     Ok(())
