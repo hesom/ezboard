@@ -10,6 +10,10 @@ use std::path::PathBuf;
 #[command(version, about, long_about = None)]
 struct Cli {
     path: Option<PathBuf>,
+
+    /// Render interval in milliseconds
+    #[clap(long, default_value = "100")]
+    render_interval: u64,
 }
 
 #[tokio::main]
@@ -19,7 +23,7 @@ async fn main() -> Result<()> {
     let backend = CrosstermBackend::new(std::io::stdout());
     let terminal = Terminal::new(backend)?;
 
-    let event_stream = EventStream::new(1000, &args.path).await;
+    let event_stream = EventStream::new(args.render_interval, &args.path).await;
     
     let mut app = App::new();
     let mut tui = Tui::new(terminal, event_stream);
