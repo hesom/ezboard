@@ -31,9 +31,13 @@ async fn main() -> Result<()> {
         match event {
             Event::Tick => tui.draw(&mut app)?,
             Event::LineRead(line) => app.process_line(&line),
-            Event::End => app.quit(),
+            Event::End => {
+                app.quit();
+                break;
+            },
             Event::Key(key) => if key.code == KeyCode::Char('q') || key.code == KeyCode::Char('Q'){
-                app.quit()
+                app.quit();
+                break;
             }
         }
     }
