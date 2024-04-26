@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 #[derive(Debug)]
-struct RingBuffer<T> {
+pub struct RingBuffer<T> {
     buf: VecDeque<T>,
     capacity: usize,
 }

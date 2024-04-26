@@ -8,7 +8,7 @@ use anyhow::Result;
 /// Terminal events
 #[derive(Debug, Clone)]
 pub enum Event {
-    /// Terminall tick
+    /// Terminal tick
     Tick,
     /// Key press
     Key(KeyEvent),

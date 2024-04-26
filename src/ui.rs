@@ -1,13 +1,33 @@
 use ratatui::{
     style::Stylize,
     symbols::Marker,
-    widgets::{Axis, Chart, Dataset, GraphType},
+    text::Line,
+    widgets::{Axis, Chart, Dataset, GraphType, Paragraph},
     Frame,
 };
 
 use crate::app::App;
 
 pub fn render(app: &mut App, frame: &mut Frame) {
+    let area = frame.size();
+
+    if app.state.passthrough {
+        let viewport_height = usize::max(area.as_size().height as usize - 1, 1);
+        let lines: Vec<_> = app
+            .state
+            .linebuf
+            .iter()
+            .rev()
+            .take(viewport_height)
+            .rev()
+            .cloned()
+            .map(Line::from)
+            .collect();
+        let paragraph = Paragraph::new(lines);
+        frame.render_widget(paragraph, area);
+        return;
+    }
+
     let dataset = Dataset::default()
         .name("Loss")
         .data(&app.state.data)
@@ -34,7 +54,6 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             format!("{max_val}").into(),
         ]);
 
-    let area = frame.size();
     frame.render_widget(
         Chart::new(vec![dataset])
             .red()

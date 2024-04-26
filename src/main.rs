@@ -1,7 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
 use crossterm::event::KeyCode;
-use ezboard::{app::App, event::{Event, EventStream}, tui::Tui};
+use ezboard::{
+    app::App,
+    event::{Event, EventStream},
+    tui::Tui,
+};
 use ratatui::{backend::CrosstermBackend, Terminal};
 
 use std::path::PathBuf;
@@ -14,6 +18,9 @@ struct Cli {
     /// Render interval in milliseconds
     #[clap(long, default_value = "100")]
     render_interval: u64,
+
+    #[clap(long, default_value = "100")]
+    line_buffer_length: usize,
 }
 
 #[tokio::main]
@@ -24,30 +31,33 @@ async fn main() -> Result<()> {
     let terminal = Terminal::new(backend)?;
 
     let event_stream = EventStream::new(args.render_interval, &args.path).await;
-    
-    let mut app = App::new();
+
+    let mut app = App::new(args.line_buffer_length);
     let mut tui = Tui::new(terminal, event_stream);
     tui.init()?;
-    
+
     while app.running {
         let event = tui.event_stream.next().await;
 
         match event {
             Event::Tick => tui.draw(&mut app)?,
             Event::LineRead(line) => app.process_line(&line),
-            Event::End => {
-                app.quit();
-                break;
+            Event::Key(key) => match key.code {
+                KeyCode::Char('q') | KeyCode::Char('Q') => {
+                    app.quit();
+                    break;
+                }
+                KeyCode::Char('p') => {
+                    app.state.passthrough = !app.state.passthrough;
+                }
+                _ => (),
             },
-            Event::Key(key) => if key.code == KeyCode::Char('q') || key.code == KeyCode::Char('Q'){
-                app.quit();
-                break;
-            }
+            _ => (),
         }
     }
 
     tui.exit()?;
 
-    std::io::copy(&mut std::io::stdin(),&mut std::io::stdout())?;
+    std::io::copy(&mut std::io::stdin(), &mut std::io::stdout())?;
     Ok(())
 }

@@ -4,12 +4,16 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
+use crate::utils::RingBuffer;
+
 type Entry = (f64, f64);
 
 pub struct AppState {
     pub data: Vec<Entry>,
     pub min_val: f64,
     pub max_val: f64,
+    pub passthrough: bool,
+    pub linebuf: RingBuffer<String>,
 }
 
 impl Default for AppState {
@@ -18,6 +22,8 @@ impl Default for AppState {
             data: vec![],
             min_val: f64::INFINITY,
             max_val: f64::NEG_INFINITY,
+            passthrough: false,
+            linebuf: RingBuffer::new(10),
         }
     }
 }
@@ -62,8 +68,14 @@ impl Default for App {
 }
 
 impl App {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(line_buffer_length: usize) -> Self {
+        App {
+            running: true,
+            state: AppState {
+                linebuf: RingBuffer::new(line_buffer_length),
+                ..Default::default()
+            },
+        }
     }
 
     pub fn quit(&mut self) {
@@ -75,11 +87,14 @@ impl App {
 
         Ok(())
     }
+
     pub fn process_line(&mut self, line: &str) {
         static PATTERN: Lazy<Regex> = Lazy::new(|| {
             Regex::new(r"(?i)(\bloss\b|\berror\b|\bcost\b).*?([0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)")
                 .unwrap()
         });
+
+        self.state.linebuf.add(line.to_owned());
 
         let Some(cap) = PATTERN.captures(&line) else {
             return;
