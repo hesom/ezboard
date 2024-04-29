@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
                     app.quit();
                     break;
                 }
-                KeyCode::Char('p') => {
+                KeyCode::Char('p') | KeyCode::Char('P') => {
                     app.state.passthrough = !app.state.passthrough;
                 }
                 _ => (),
