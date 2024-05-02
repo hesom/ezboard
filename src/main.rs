@@ -19,8 +19,22 @@ struct Cli {
     #[clap(long, default_value = "100")]
     render_interval: u64,
 
+    /// Max number of buffered lines in passthrough mode
     #[clap(long, default_value = "100")]
     line_buffer_length: usize,
+
+    /// Exponential moving average smoothing factor between 0 (constant) and 1 (no smoothing)
+    #[clap(long, short, default_value = "1.0", value_parser = ranged_float)]
+    ema_factor: f64,
+}
+
+fn ranged_float(s: &str) -> Result<f64, String> {
+    let f: f64 = s.parse().map_err(|_| format!("`{s}` isn't a number"))?;
+    if f < 0.0 || f > 1.0 {
+        return Err("Only numbers between 0 and 1 are supported".into());
+    }
+
+    Ok(f)
 }
 
 #[tokio::main]
@@ -32,7 +46,7 @@ async fn main() -> Result<()> {
 
     let event_stream = EventStream::new(args.render_interval, &args.path).await;
 
-    let mut app = App::new(args.line_buffer_length);
+    let mut app = App::new(args.line_buffer_length, args.ema_factor);
     let mut tui = Tui::new(terminal, event_stream);
     tui.init()?;
 

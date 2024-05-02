@@ -13,6 +13,7 @@ pub struct AppState {
     pub min_val: f64,
     pub max_val: f64,
     pub passthrough: bool,
+    pub ema_factor: f64,
     pub linebuf: RingBuffer<String>,
 }
 
@@ -23,6 +24,7 @@ impl Default for AppState {
             min_val: f64::INFINITY,
             max_val: f64::NEG_INFINITY,
             passthrough: false,
+            ema_factor: 1.0,
             linebuf: RingBuffer::new(10),
         }
     }
@@ -34,6 +36,11 @@ impl AppState {
     }
 
     pub fn insert(&mut self, new_val: f64) -> Result<()> {
+        let new_val = match self.data.last() {
+            Some((_, val)) => self.ema_factor * new_val + (1.0 - self.ema_factor) * val,
+            None => new_val,
+        };
+
         self.min_val = f64::min(self.min_val, new_val);
         self.max_val = f64::max(self.max_val, new_val);
 
@@ -68,11 +75,12 @@ impl Default for App {
 }
 
 impl App {
-    pub fn new(line_buffer_length: usize) -> Self {
+    pub fn new(line_buffer_length: usize, ema_factor: f64) -> Self {
         App {
             running: true,
             state: AppState {
                 linebuf: RingBuffer::new(line_buffer_length),
+                ema_factor,
                 ..Default::default()
             },
         }
