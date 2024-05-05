@@ -98,8 +98,10 @@ impl App {
 
     pub fn process_line(&mut self, line: &str) {
         static PATTERN: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r"(?i)(\bloss\b|\berror\b|\bcost\b).*?([0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)")
-                .unwrap()
+            Regex::new(
+                r"(?i)(\b\w*?(?:loss|error|cost)\b)[\s--\n]*:?[\s--\n]*([0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)",
+            )
+            .unwrap()
         });
 
         self.state.linebuf.add(line.to_owned());
@@ -114,5 +116,89 @@ impl App {
         };
 
         let _ = self.insert(val);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_vec(app: &mut App, test_lines: Vec<(&str, f64, f64)>) {
+        for (line, t_exp, val_exp) in test_lines {
+            app.process_line(line);
+            let (t, val) = app.state.data.last().expect("No value added");
+            assert_eq!(*val, val_exp, "Wrong loss value for line {}", line);
+            assert_eq!(*t, t_exp, "Wrong t value for line {}", line);
+        }
+    }
+
+    #[test]
+    fn simple_parse() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("loss 1.0", 0.0, 1.0),
+            ("loss 2", 1.0, 2.0),
+            ("Loss 3.1", 2.0, 3.1),
+            ("Loss 4", 3.0, 4.0),
+        ];
+
+        test_vec(&mut app, test_lines);
+    }
+
+    #[test]
+    fn skip_lines() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("loss 1.0", 0.0, 1.0),
+            ("empty 2.0", 0.0, 1.0),
+            ("loss 3.0", 1.0, 3.0),
+        ];
+
+        test_vec(&mut app, test_lines)
+    }
+
+    #[test]
+    fn hard_parse() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("loss 0.0", 0.0, 0.0),
+            ("loss 1.0, acc 2.0", 1.0, 1.0),
+            ("MainLoss 2.0, AuxLoss 3.0, acc 2.0", 2.0, 2.0),
+            ("loss Loss loss Loss acc 4.0", 2.0, 2.0),
+            ("Loss loss loss loss 120.0", 3.0, 120.0),
+        ];
+
+        test_vec(&mut app, test_lines);
+    }
+
+    #[test]
+    fn whitespace() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("loss\t1.0", 0.0, 1.0),
+            ("loss\n2.0", 0.0, 1.0),
+            ("loss    3.0", 1.0, 3.0),
+            ("loss:\t4.0", 2.0, 4.0),
+        ];
+
+        test_vec(&mut app, test_lines);
+    }
+
+    #[test]
+    fn identifiers() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("loss 1.0", 0.0, 1.0),
+            ("cost 2.0", 1.0, 2.0),
+            ("error 3.0", 2.0, 3.0),
+            ("maincost 4.0", 3.0, 4.0),
+        ];
+
+        test_vec(&mut app, test_lines);
     }
 }
