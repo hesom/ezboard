@@ -1,6 +1,5 @@
 use core::f64;
 
-use anyhow::Result;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -35,7 +34,7 @@ impl AppState {
         Self::default()
     }
 
-    pub fn insert(&mut self, new_val: f64) -> Result<()> {
+    pub fn insert(&mut self, new_val: f64) {
         let new_val = match self.data.last() {
             Some((_, val)) => self.ema_factor * new_val + (1.0 - self.ema_factor) * val,
             None => new_val,
@@ -46,8 +45,6 @@ impl AppState {
 
         let new_t = self.max_t();
         self.data.push((new_t, new_val));
-
-        Ok(())
     }
 
     pub fn max_t(&self) -> f64 {
@@ -90,10 +87,8 @@ impl App {
         self.running = false;
     }
 
-    pub fn insert(&mut self, new_val: f64) -> Result<()> {
-        self.state.insert(new_val)?;
-
-        Ok(())
+    pub fn insert(&mut self, new_val: f64) {
+        self.state.insert(new_val);
     }
 
     pub fn process_line(&mut self, line: &str) {
@@ -115,7 +110,7 @@ impl App {
             return;
         };
 
-        let _ = self.insert(val);
+        self.insert(val);
     }
 }
 
