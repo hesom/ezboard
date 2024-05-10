@@ -58,7 +58,7 @@ impl AppState {
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    ///
+    /// Contains the whole state of the app (buffered lines, parsed values, etc)
     pub state: AppState,
 }
 
