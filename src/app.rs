@@ -196,4 +196,20 @@ mod tests {
 
         test_vec(&mut app, test_lines);
     }
+
+    #[test]
+    fn overflow() {
+        let mut app = App::new(2, 1.0);
+
+        app.process_line("loss 1.0");
+        app.process_line("cost 2.0");
+        app.process_line("error 3.0");
+
+        let s = app
+            .state
+            .linebuf
+            .peek()
+            .expect("There should be an element in the buffer");
+        assert_eq!(s, "cost 2.0");
+    }
 }
