@@ -94,7 +94,7 @@ impl App {
     pub fn process_line(&mut self, line: &str) {
         static PATTERN: Lazy<Regex> = Lazy::new(|| {
             Regex::new(
-                r"(?i)(\b\w*?(?:loss|error|cost)\b)[\s--\n]*:?[\s--\n]*([0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)",
+                r"(?i)(\b\w*?(?:loss|error|cost)\b)[\s--\n]*:?[\s--\n]*(-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)",
             )
             .unwrap()
         });
@@ -194,6 +194,21 @@ mod tests {
             ("maincost 4.0", 3.0, 4.0),
         ];
 
+        test_vec(&mut app, test_lines);
+    }
+
+    #[test]
+    fn scientific() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("loss 1e-2", 0.0, 1e-2),
+            ("cost -2e3", 1.0, -2e3),
+            ("error 1.5e-10", 2.0, 1.5e-10),
+            ("loss 1.6e12", 3.0, 1.6e12),
+        ];
+
+        // We are testing for hard equality!
         test_vec(&mut app, test_lines);
     }
 
