@@ -28,16 +28,23 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         return;
     }
 
+    let Some(key) = app.state.data.keys().nth(0) else {
+        return;
+    };
+    let Some(data) = app.state.data.get(key) else {
+        return;
+    };
+    let min_val = data.get_min();
+    let max_val = data.get_max();
+
     let dataset = Dataset::default()
-        .name("Loss")
-        .data(&app.state.data)
+        .name(key.to_owned())
+        .data(data.get_data())
         .marker(Marker::Braille)
         .graph_type(GraphType::Line)
         .red();
 
-    let time_step = app.state.max_t() - 1.0;
-    let min_val = app.state.min_val;
-    let max_val = app.state.max_val;
+    let time_step = app.state.max_t(key) - 1.0;
 
     let x_axis = Axis::default()
         .title("Step".red())
