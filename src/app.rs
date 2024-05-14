@@ -137,17 +137,10 @@ impl App {
 
         self.state.linebuf.add(line.to_owned());
 
-        let Some(cap) = PATTERN.captures(&line) else {
-            return;
-        };
-        let Some(key) = cap.get(1) else { return };
-        let Some(val) = cap.get(2) else { return };
-
-        let Ok(val) = val.as_str().parse() else {
-            return;
-        };
-
-        self.insert(key.as_str(), val);
+        for (_, [key, val]) in PATTERN.captures_iter(&line).map(|c| c.extract()) {
+            let Ok(val) = val.parse() else { return };
+            self.insert(key, val);
+        }
     }
 }
 
@@ -206,11 +199,78 @@ mod tests {
             ("loss 0.0", "loss", 0.0, 0.0),
             ("loss 1.0, acc 2.0", "loss", 1.0, 1.0),
             ("MainLoss 2.0, AuxLoss 3.0, acc 2.0", "MainLoss", 0.0, 2.0),
-            ("loss Loss loss Loss acc 4.0", "acc", 0.0, 4.0),
+            ("loss Loss loss Loss acc 4.0", "acc", 2.0, 4.0),
             ("Loss loss loss loss 120.0", "loss", 2.0, 120.0),
         ];
 
         test_vec(&mut app, test_lines);
+    }
+
+    #[test]
+    fn multi_vals_per_line() {
+        let mut app = App::new(5, 1.0);
+
+        app.process_line("loss 0.0, acc 2.0, mainloss 3.0");
+        app.process_line("loss 5.0, acc 2.0, loss 4.0");
+        assert_eq!(
+            app.state
+                .data
+                .get("loss")
+                .expect("Key not in data")
+                .data_points[0]
+                .1,
+            0.0
+        );
+
+        assert_eq!(
+            app.state
+                .data
+                .get("acc")
+                .expect("Key not in data")
+                .data_points[0]
+                .1,
+            2.0
+        );
+
+        assert_eq!(
+            app.state
+                .data
+                .get("mainloss")
+                .expect("Key not in data")
+                .data_points[0]
+                .1,
+            3.0
+        );
+
+        assert_eq!(
+            app.state
+                .data
+                .get("loss")
+                .expect("Key not in data")
+                .data_points[1]
+                .1,
+            5.0
+        );
+
+        assert_eq!(
+            app.state
+                .data
+                .get("acc")
+                .expect("Key not in data")
+                .data_points[1]
+                .1,
+            2.0
+        );
+
+        assert_eq!(
+            app.state
+                .data
+                .get("loss")
+                .expect("Key not in data")
+                .data_points[2]
+                .1,
+            4.0
+        );
     }
 
     #[test]
