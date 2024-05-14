@@ -6,7 +6,14 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, UiState};
+use crate::app::App;
+
+#[derive(PartialEq, PartialOrd)]
+pub enum UiState {
+    Plot,
+    KeySelection,
+    Passthrough,
+}
 
 pub fn plot(app: &mut App, frame: &mut Frame) {
     let area = frame.size();
@@ -65,7 +72,7 @@ pub fn key_selection_dialog(app: &mut App, frame: &mut Frame) {
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true);
 
-    frame.render_stateful_widget(list, area, &mut app.state.list_state);
+    frame.render_stateful_widget(list, area, &mut app.state.selection_list_state);
 }
 
 pub fn passthrough(app: &mut App, frame: &mut Frame) {

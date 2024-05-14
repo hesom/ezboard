@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use ratatui::widgets::ListState;
 use regex::Regex;
 
-use crate::utils::RingBuffer;
+use crate::{ui::UiState, utils::RingBuffer};
 
 type Entry = (f64, f64);
 
@@ -48,16 +48,9 @@ pub struct AppState {
     pub data: HashMap<String, Timeseries>,
     pub display_key: Option<String>,
     pub ui_state: UiState,
-    pub list_state: ListState,
+    pub selection_list_state: ListState,
     pub ema_factor: f64,
     pub linebuf: RingBuffer<String>,
-}
-
-#[derive(PartialEq, PartialOrd)]
-pub enum UiState {
-    Plot,
-    KeySelection,
-    Passthrough,
 }
 
 impl Default for AppState {
@@ -66,7 +59,7 @@ impl Default for AppState {
             data: HashMap::new(),
             display_key: None,
             ui_state: UiState::Plot,
-            list_state: ListState::default().with_selected(Some(0)),
+            selection_list_state: ListState::default().with_selected(Some(0)),
             ema_factor: 1.0,
             linebuf: RingBuffer::new(10),
         }
@@ -161,7 +154,7 @@ impl App {
 
     fn select_next(&mut self) {
         let num_keys = self.state.data.len();
-        let Some(idx) = self.state.list_state.selected_mut() else {
+        let Some(idx) = self.state.selection_list_state.selected_mut() else {
             return;
         };
         if *idx == num_keys - 1 {
@@ -172,7 +165,7 @@ impl App {
     }
 
     fn select_previous(&mut self) {
-        let Some(idx) = self.state.list_state.selected_mut() else {
+        let Some(idx) = self.state.selection_list_state.selected_mut() else {
             return;
         };
         if *idx == 0 {
@@ -187,7 +180,7 @@ impl App {
             UiState::Plot => (),
             UiState::Passthrough => (),
             UiState::KeySelection => {
-                let Some(idx) = self.state.list_state.selected() else {
+                let Some(idx) = self.state.selection_list_state.selected() else {
                     return;
                 };
                 let mut keys: Vec<String> = self.state.data.keys().cloned().collect();
