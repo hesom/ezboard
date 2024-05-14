@@ -49,14 +49,15 @@ pub struct AppState {
     pub display_key: Option<String>,
     pub ui_state: UiState,
     pub list_state: ListState,
-    pub passthrough: bool,
     pub ema_factor: f64,
     pub linebuf: RingBuffer<String>,
 }
 
+#[derive(PartialEq, PartialOrd)]
 pub enum UiState {
     Plot,
     KeySelection,
+    Passthrough,
 }
 
 impl Default for AppState {
@@ -66,7 +67,6 @@ impl Default for AppState {
             display_key: None,
             ui_state: UiState::Plot,
             list_state: ListState::default().with_selected(Some(0)),
-            passthrough: false,
             ema_factor: 1.0,
             linebuf: RingBuffer::new(10),
         }
@@ -159,17 +159,7 @@ impl App {
         }
     }
 
-    pub fn select_key(&mut self, code: KeyCode) {
-        self.state.ui_state = UiState::KeySelection;
-
-        match code {
-            KeyCode::Up => self.select_previous(),
-            KeyCode::Down => self.select_next(),
-            _ => (),
-        }
-    }
-
-    pub fn select_next(&mut self) {
+    fn select_next(&mut self) {
         let num_keys = self.state.data.len();
         let Some(idx) = self.state.list_state.selected_mut() else {
             return;
@@ -181,7 +171,7 @@ impl App {
         *idx += 1;
     }
 
-    pub fn select_previous(&mut self) {
+    fn select_previous(&mut self) {
         let Some(idx) = self.state.list_state.selected_mut() else {
             return;
         };
@@ -192,9 +182,10 @@ impl App {
         *idx -= 1;
     }
 
-    pub fn enter_pressed(&mut self) {
+    fn enter_pressed(&mut self) {
         match self.state.ui_state {
             UiState::Plot => (),
+            UiState::Passthrough => (),
             UiState::KeySelection => {
                 let Some(idx) = self.state.list_state.selected() else {
                     return;
@@ -205,6 +196,30 @@ impl App {
                 self.state.display_key = Some(next_key.into());
                 self.state.ui_state = UiState::Plot;
             }
+        }
+    }
+
+    pub fn handle_keypress(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('q') | KeyCode::Char('Q') => {
+                self.quit();
+            }
+            KeyCode::Char('p') | KeyCode::Char('P') => {
+                self.state.ui_state = match self.state.ui_state {
+                    UiState::Passthrough => UiState::Plot,
+                    _ => UiState::Passthrough,
+                }
+            }
+            KeyCode::Up | KeyCode::Left => match self.state.ui_state {
+                UiState::KeySelection => self.select_previous(),
+                _ => self.state.ui_state = UiState::KeySelection,
+            },
+            KeyCode::Down | KeyCode::Right => match self.state.ui_state {
+                UiState::KeySelection => self.select_next(),
+                _ => self.state.ui_state = UiState::KeySelection,
+            },
+            KeyCode::Enter => self.enter_pressed(),
+            _ => (),
         }
     }
 }

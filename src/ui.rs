@@ -11,23 +11,6 @@ use crate::app::{App, UiState};
 pub fn plot(app: &mut App, frame: &mut Frame) {
     let area = frame.size();
 
-    if app.state.passthrough {
-        let viewport_height = usize::max(area.as_size().height as usize - 1, 1);
-        let lines: Vec<_> = app
-            .state
-            .linebuf
-            .iter()
-            .rev()
-            .take(viewport_height)
-            .rev()
-            .cloned()
-            .map(Line::from)
-            .collect();
-        let paragraph = Paragraph::new(lines);
-        frame.render_widget(paragraph, area);
-        return;
-    }
-
     let Some(ref key) = app.state.display_key else {
         return;
     };
@@ -85,9 +68,28 @@ pub fn key_selection_dialog(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(list, area, &mut app.state.list_state);
 }
 
+pub fn passthrough(app: &mut App, frame: &mut Frame) {
+    let area = frame.size();
+
+    let viewport_height = usize::max(area.as_size().height as usize - 1, 1);
+    let lines: Vec<_> = app
+        .state
+        .linebuf
+        .iter()
+        .rev()
+        .take(viewport_height)
+        .rev()
+        .cloned()
+        .map(Line::from)
+        .collect();
+    let paragraph = Paragraph::new(lines);
+    frame.render_widget(paragraph, area);
+}
+
 pub fn render(app: &mut App, frame: &mut Frame) {
     match app.state.ui_state {
         UiState::Plot => plot(app, frame),
         UiState::KeySelection => key_selection_dialog(app, frame),
+        UiState::Passthrough => passthrough(app, frame),
     }
 }

@@ -61,16 +61,7 @@ async fn main() -> Result<()> {
                     app.quit();
                     break;
                 }
-                KeyCode::Char('p') | KeyCode::Char('P') => {
-                    app.state.passthrough = !app.state.passthrough;
-                }
-                KeyCode::Down | KeyCode::Up => {
-                    app.select_key(key.code);
-                }
-                KeyCode::Enter => {
-                    app.enter_pressed();
-                }
-                _ => (),
+                _ => app.handle_keypress(key.code),
             },
             _ => (),
         }
