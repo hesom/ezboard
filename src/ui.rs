@@ -1,14 +1,14 @@
 use ratatui::{
-    style::Stylize,
+    style::{Modifier, Style, Stylize},
     symbols::Marker,
     text::Line,
-    widgets::{Axis, Chart, Dataset, GraphType, Paragraph},
+    widgets::{Axis, Block, Borders, Chart, Dataset, GraphType, List, Paragraph},
     Frame,
 };
 
-use crate::app::App;
+use crate::app::{App, UiState};
 
-pub fn render(app: &mut App, frame: &mut Frame) {
+pub fn plot(app: &mut App, frame: &mut Frame) {
     let area = frame.size();
 
     if app.state.passthrough {
@@ -28,9 +28,10 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         return;
     }
 
-    let Some(key) = app.state.data.keys().nth(0) else {
+    let Some(ref key) = app.state.display_key else {
         return;
     };
+
     let Some(data) = app.state.data.get(key) else {
         return;
     };
@@ -44,7 +45,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .graph_type(GraphType::Line)
         .red();
 
-    let time_step = app.state.max_t(key) - 1.0;
+    let time_step = app.state.max_t(&key) - 1.0;
 
     let x_axis = Axis::default()
         .title("Step".red())
@@ -53,7 +54,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .labels(vec!["0.0".into(), format!("{time_step}").into()]);
 
     let y_axis = Axis::default()
-        .title("Loss".red())
+        .title(key.clone().red())
         .white()
         .bounds([min_val, max_val])
         .labels(vec![
@@ -68,4 +69,25 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             .y_axis(y_axis),
         area,
     );
+}
+
+pub fn key_selection_dialog(app: &mut App, frame: &mut Frame) {
+    let area = frame.size();
+
+    let mut items: Vec<String> = app.state.data.keys().cloned().collect();
+    items.sort();
+    let list = List::new(items)
+        .block(Block::default().title("Select key").borders(Borders::ALL))
+        .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
+        .highlight_symbol(">>")
+        .repeat_highlight_symbol(true);
+
+    frame.render_stateful_widget(list, area, &mut app.state.list_state);
+}
+
+pub fn render(app: &mut App, frame: &mut Frame) {
+    match app.state.ui_state {
+        UiState::Plot => plot(app, frame),
+        UiState::KeySelection => key_selection_dialog(app, frame),
+    }
 }

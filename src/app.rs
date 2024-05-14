@@ -1,7 +1,9 @@
 use core::f64;
 use std::collections::HashMap;
 
+use crossterm::event::KeyCode;
 use once_cell::sync::Lazy;
+use ratatui::widgets::ListState;
 use regex::Regex;
 
 use crate::utils::RingBuffer;
@@ -44,15 +46,26 @@ impl Default for Timeseries {
 
 pub struct AppState {
     pub data: HashMap<String, Timeseries>,
+    pub display_key: Option<String>,
+    pub ui_state: UiState,
+    pub list_state: ListState,
     pub passthrough: bool,
     pub ema_factor: f64,
     pub linebuf: RingBuffer<String>,
+}
+
+pub enum UiState {
+    Plot,
+    KeySelection,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             data: HashMap::new(),
+            display_key: None,
+            ui_state: UiState::Plot,
+            list_state: ListState::default().with_selected(Some(0)),
             passthrough: false,
             ema_factor: 1.0,
             linebuf: RingBuffer::new(10),
@@ -124,6 +137,9 @@ impl App {
     }
 
     fn insert(&mut self, key: &str, new_val: f64) {
+        if self.state.data.len() == 0 {
+            self.state.display_key = Some(key.into());
+        }
         self.state.insert(key, new_val);
     }
 
@@ -140,6 +156,55 @@ impl App {
         for (_, [key, val]) in PATTERN.captures_iter(&line).map(|c| c.extract()) {
             let Ok(val) = val.parse() else { return };
             self.insert(key, val);
+        }
+    }
+
+    pub fn select_key(&mut self, code: KeyCode) {
+        self.state.ui_state = UiState::KeySelection;
+
+        match code {
+            KeyCode::Up => self.select_previous(),
+            KeyCode::Down => self.select_next(),
+            _ => (),
+        }
+    }
+
+    pub fn select_next(&mut self) {
+        let num_keys = self.state.data.len();
+        let Some(idx) = self.state.list_state.selected_mut() else {
+            return;
+        };
+        if *idx == num_keys - 1 {
+            return;
+        }
+
+        *idx += 1;
+    }
+
+    pub fn select_previous(&mut self) {
+        let Some(idx) = self.state.list_state.selected_mut() else {
+            return;
+        };
+        if *idx == 0 {
+            return;
+        }
+
+        *idx -= 1;
+    }
+
+    pub fn enter_pressed(&mut self) {
+        match self.state.ui_state {
+            UiState::Plot => (),
+            UiState::KeySelection => {
+                let Some(idx) = self.state.list_state.selected() else {
+                    return;
+                };
+                let mut keys: Vec<String> = self.state.data.keys().cloned().collect();
+                keys.sort();
+                let next_key = keys.get(idx).expect("Tried to access key out of bounds");
+                self.state.display_key = Some(next_key.into());
+                self.state.ui_state = UiState::Plot;
+            }
         }
     }
 }

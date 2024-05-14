@@ -64,6 +64,12 @@ async fn main() -> Result<()> {
                 KeyCode::Char('p') | KeyCode::Char('P') => {
                     app.state.passthrough = !app.state.passthrough;
                 }
+                KeyCode::Down | KeyCode::Up => {
+                    app.select_key(key.code);
+                }
+                KeyCode::Enter => {
+                    app.enter_pressed();
+                }
                 _ => (),
             },
             _ => (),
