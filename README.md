@@ -28,3 +28,4 @@ There are some hotkeys that will be expanded in the future:
 |-----------|------------|
 | <kbd>p</kbd>,<kbd>P</kbd> | Toggle between graph and raw log output |
 | <kbd>q</kbd>,<kbd>Q</kbd> | Shutdown ezboard. This doesn't stop the training |
+| <kbd>&uarr;</kbd>,<kbd>&darr;</kbd> or <kbd>&larr;</kbd>,<kbd>&rarr;</kbd> | Select a different metric to plot |
