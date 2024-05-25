@@ -139,7 +139,7 @@ impl App {
     pub fn process_line(&mut self, line: &str) {
         static PATTERN: Lazy<Regex> = Lazy::new(|| {
             Regex::new(
-                r"(?i)(\b\w*?(?:loss|error|cost|acc)\b)[\s--\n]*:?[\s--\n]*(-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)",
+                r"(?i)(\b\w*?(?:loss|error|cost|acc|accuracy)\b)[\s--\n]*:?[\s--\n]*(-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)",
             )
             .unwrap()
         });
@@ -274,6 +274,7 @@ mod tests {
             ("MainLoss 2.0, AuxLoss 3.0, acc 2.0", "MainLoss", 0.0, 2.0),
             ("loss Loss loss Loss acc 4.0", "acc", 2.0, 4.0),
             ("Loss loss loss loss 120.0", "loss", 2.0, 120.0),
+            ("accuracy 100%", "accuracy", 0.0, 100.0),
         ];
 
         test_vec(&mut app, test_lines);
