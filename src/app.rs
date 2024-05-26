@@ -148,7 +148,14 @@ impl App {
 
         for (_, [key, val]) in PATTERN.captures_iter(&line).map(|c| c.extract()) {
             let Ok(val) = val.parse() else { return };
-            self.insert(key, val);
+            let key = if line.to_lowercase().contains("test") {
+                key.to_owned() + "_test"
+            } else if line.to_lowercase().contains("val") {
+                key.to_owned() + "_val"
+            } else {
+                key.to_owned()
+            };
+            self.insert(&key, val);
         }
     }
 
@@ -370,6 +377,19 @@ mod tests {
             ("cost 2.0", "cost", 0.0, 2.0),
             ("error 3.0", "error", 0.0, 3.0),
             ("maincost 4.0", "maincost", 0.0, 4.0),
+        ];
+
+        test_vec(&mut app, test_lines);
+    }
+
+    #[test]
+    fn val_train_split() {
+        let mut app = App::new(5, 1.0);
+
+        let test_lines = vec![
+            ("Epoch 0: Loss 1.0", "Loss", 0.0, 1.0),
+            ("Val Epoch 0: Loss 2.0, acc 95%", "acc_val", 0.0, 95.0),
+            ("Test Acc 100%", "Acc_test", 0.0, 100.0),
         ];
 
         test_vec(&mut app, test_lines);
