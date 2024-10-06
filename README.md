@@ -13,7 +13,7 @@ cargo install --path .
 ```
 
 ## Usage
-Just pipe the output of your training script into ezboard. By default lines are buffered by python before sent to ezboard, which causes a delay. To disable line buffering you can pass the `-u` to the python interpreter:
+Just pipe the output of your training script into ezboard. By default lines are buffered by python before they are sent to ezboard, which causes a delay. To disable line buffering, pass the `-u` to the python interpreter:
 ```bash
 python -u train.py | ezboard
 ```
